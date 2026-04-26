@@ -4,7 +4,7 @@
   "private": true,
   "description": "Browser extension that clips web pages as Obsidian-compatible markdown.",
   "scripts": {
-    "test": "node --test tests/js"
+    "test": "node --test tests/js/*.test.js"
   },
   "devDependencies": {
     "jsdom": "^24.1.3"

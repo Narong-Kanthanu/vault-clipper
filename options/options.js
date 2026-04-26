@@ -83,6 +83,20 @@ async function saveSettings() {
     selectedVaultId
   });
   showStatus('Saved.', 'success');
+  setTimeout(closeOptionsTab, 600);
+}
+
+async function closeOptionsTab() {
+  try {
+    const tab = await chrome.tabs.getCurrent();
+    if (tab && tab.id != null) {
+      await chrome.tabs.remove(tab.id);
+      return;
+    }
+  } catch {
+    // fall through to window.close()
+  }
+  window.close();
 }
 
 addVaultBtn.addEventListener('click', () => addVaultRow());

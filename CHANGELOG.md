@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Options page failed to open from the popup gear or the install-time auto-open with `Could not create an options page`. Cause: `manifest.json` was missing the `options_ui` declaration, so `chrome.runtime.openOptionsPage()` had no page to open.
+
+### Added
+
+- Options page closes itself ~600 ms after **Save**, leaving the success toast visible briefly. Useful for the first-install flow where the user just configured a vault and is about to clip.
+- `tests/js/manifest.test.js` — guards against regressions like the missing `options_ui` field by checking that every file the manifest references exists on disk.
+- `docs/brave-issue.md` — full reproduction notes for the macOS 26 (Tahoe) + Brave 147 native-messaging-host-not-found regression. Use Chrome as a workaround until Brave fixes it upstream.
+
 ## [1.0.0] — 2026-04-26
 
 ### Added

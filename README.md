@@ -173,6 +173,8 @@ After pulling extension-only changes, just click the reload icon on the extensio
   ```
 - Verify the `chrome-extension://...` ID inside that file matches the one shown in `brave://extensions/`
 
+> **Known issue — Brave 147+ on macOS 26 (Tahoe):** Brave's `launch_context.cc` logs `Can't find manifest for native messaging host com.vaultclipper.host` even when the manifest is in every documented search path (per-user, system-wide, and Chromium fallback). Native messaging works on the same machine with Chrome but not Brave, suggesting a Brave/Tahoe-specific regression. See [`docs/brave-issue.md`](docs/brave-issue.md) for the full reproduction. **Workaround:** use Chrome (`./install.sh --extension-id <ID> --chrome`) until upstream fixes it.
+
 ### "Native host has exited"
 
 - Re-run `install.sh` (it copies the script to `~/.config/vault-clipper/`, outside macOS-protected folders)

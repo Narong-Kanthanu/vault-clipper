@@ -1,0 +1,35 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Editors / IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.venv/
+venv/
+
+# Build / packaging artifacts
+*.zip
+*.crx
+*.pem
+dist/
+build/
+
+# Logs
+*.log
+/tmp/vault-clipper.log
+
+# Local environment
+.env
+.env.local

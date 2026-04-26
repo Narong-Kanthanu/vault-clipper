@@ -1,0 +1,9 @@
+{
+  "name": "com.vaultclipper.host",
+  "description": "Vault Clipper native messaging host for writing files to Obsidian vaults",
+  "path": "PLACEHOLDER",
+  "type": "stdio",
+  "allowed_origins": [
+    "chrome-extension://EXTENSION_ID/"
+  ]
+}

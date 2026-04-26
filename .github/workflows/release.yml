@@ -1,0 +1,110 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'CHANGELOG.md'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Auto-release on CHANGELOG update
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Parse latest released version from CHANGELOG
+        id: parse
+        run: |
+          set -euo pipefail
+          # First '## [X.Y.Z]' heading from the top — '[Unreleased]' is skipped
+          # because the brackets must contain semver digits.
+          version=$(grep -m1 -E '^## \[[0-9]+\.[0-9]+\.[0-9]+\]' CHANGELOG.md \
+            | sed -E 's/^## \[([0-9]+\.[0-9]+\.[0-9]+)\].*/\1/')
+          if [ -z "$version" ]; then
+            echo "::error file=CHANGELOG.md::no released semver heading found"
+            exit 1
+          fi
+          echo "version=$version" >>"$GITHUB_OUTPUT"
+          echo "tag=v$version" >>"$GITHUB_OUTPUT"
+          echo "Detected version: $version"
+
+      - name: Verify manifest.json version matches
+        run: |
+          set -euo pipefail
+          mv=$(jq -r '.version' manifest.json)
+          if [ "$mv" != "${{ steps.parse.outputs.version }}" ]; then
+            echo "::error file=manifest.json::manifest version ($mv) does not match CHANGELOG (${{ steps.parse.outputs.version }})"
+            exit 1
+          fi
+
+      - name: Check tag does not already exist
+        id: tagcheck
+        run: |
+          set -euo pipefail
+          tag="${{ steps.parse.outputs.tag }}"
+          # Local check (full history fetched above) and remote check.
+          if git rev-parse -q --verify "refs/tags/$tag" >/dev/null \
+              || git ls-remote --exit-code --tags origin "$tag" >/dev/null 2>&1; then
+            echo "Tag $tag already exists; skipping release."
+            echo "skip=true" >>"$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >>"$GITHUB_OUTPUT"
+          fi
+
+      - name: Extract release notes for this version
+        if: steps.tagcheck.outputs.skip == 'false'
+        run: |
+          set -euo pipefail
+          awk -v v="${{ steps.parse.outputs.version }}" '
+            index($0, "## [" v "]") == 1 { found=1; next }
+            found && /^## \[/        { exit }
+            found && /^\[.*\]:[ \t]/ { exit }
+            found { print }
+          ' CHANGELOG.md > RELEASE_NOTES.md
+          # Trim leading/trailing blank lines.
+          sed -i -e '/./,$!d' -e ':a;/^\n*$/{$d;N;ba;}' RELEASE_NOTES.md
+          if [ ! -s RELEASE_NOTES.md ]; then
+            echo "Release ${{ steps.parse.outputs.tag }}" > RELEASE_NOTES.md
+          fi
+          echo "----- RELEASE_NOTES.md -----"
+          cat RELEASE_NOTES.md
+          echo "----- end -----"
+
+      - name: Build extension zip
+        if: steps.tagcheck.outputs.skip == 'false'
+        run: |
+          set -euo pipefail
+          name="vault-clipper-${{ steps.parse.outputs.version }}.zip"
+          zip -r "$name" . \
+            -x '.git/*' '.github/*' '*.zip' 'RELEASE_NOTES.md' '.gitignore'
+          echo "asset=$name" >>"$GITHUB_ENV"
+
+      - name: Create and push tag
+        if: steps.tagcheck.outputs.skip == 'false'
+        run: |
+          set -euo pipefail
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "${{ steps.parse.outputs.tag }}" -m "Release ${{ steps.parse.outputs.tag }}"
+          git push origin "${{ steps.parse.outputs.tag }}"
+
+      - name: Create GitHub release
+        if: steps.tagcheck.outputs.skip == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          gh release create "${{ steps.parse.outputs.tag }}" \
+            --title  "Vault Clipper ${{ steps.parse.outputs.tag }}" \
+            --notes-file RELEASE_NOTES.md \
+            "$asset"

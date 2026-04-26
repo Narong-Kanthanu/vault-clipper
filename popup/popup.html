@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="header">
+    <svg class="logo" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7f6df2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+      <polyline points="14 2 14 8 20 8"/>
+      <line x1="16" y1="13" x2="8" y2="13"/>
+      <line x1="16" y1="17" x2="8" y2="17"/>
+      <polyline points="10 9 9 9 8 9"/>
+    </svg>
+    <span class="title">Vault Clipper</span>
+    <button id="open-options" class="icon-btn" title="Settings" aria-label="Settings">⚙</button>
+  </div>
+
+  <div id="needs-setup" class="needs-setup" hidden>
+    <p class="empty-msg">No vaults configured yet.</p>
+    <button id="open-options-cta" class="clip-btn">Open Settings</button>
+  </div>
+
+  <div id="main" hidden>
+    <div class="field">
+      <label>Vault</label>
+      <div id="vault-toggle" class="vault-toggle"></div>
+    </div>
+
+    <div class="field">
+      <label for="title-input">Title</label>
+      <input type="text" id="title-input" placeholder="Page title...">
+    </div>
+
+    <div class="field">
+      <label for="tags-input">Tags</label>
+      <input type="text" id="tags-input" placeholder="comma, separated, tags">
+    </div>
+
+    <div class="field checkbox-field">
+      <label>
+        <input type="checkbox" id="download-images" checked>
+        Download images to assets
+      </label>
+    </div>
+
+    <button id="clip-btn" class="clip-btn">Clip Page</button>
+
+    <div id="status" class="status">Ready</div>
+  </div>
+
+  <script src="../lib/turndown.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

@@ -1,0 +1,215 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  width: 360px;
+  background: #1e1e1e;
+  color: #dcddde;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 13px;
+  padding: 16px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #333;
+}
+
+.title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #e0e0e0;
+  flex: 1;
+}
+
+.icon-btn {
+  background: transparent;
+  border: none;
+  color: #888;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+}
+
+.icon-btn:hover {
+  background: #2e2e2e;
+  color: #dcddde;
+}
+
+.needs-setup {
+  text-align: center;
+  padding: 16px 0;
+}
+
+.empty-msg {
+  color: #888;
+  margin-bottom: 12px;
+  font-size: 13px;
+}
+
+.field {
+  margin-bottom: 12px;
+}
+
+.field label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #888;
+  margin-bottom: 4px;
+}
+
+.vault-toggle {
+  display: flex;
+  gap: 0;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid #383838;
+}
+
+.vault-btn {
+  flex: 1;
+  padding: 8px 0;
+  background: #262626;
+  color: #888;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.15s ease;
+}
+
+.vault-btn:first-child {
+  border-right: 1px solid #383838;
+}
+
+.vault-btn:hover {
+  background: #2e2e2e;
+  color: #bbb;
+}
+
+.vault-btn.active {
+  background: #7f6df2;
+  color: #fff;
+}
+
+select,
+input[type="text"] {
+  width: 100%;
+  padding: 8px 10px;
+  background: #262626;
+  border: 1px solid #383838;
+  border-radius: 6px;
+  color: #dcddde;
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+select:focus,
+input[type="text"]:focus {
+  border-color: #7f6df2;
+}
+
+select {
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%23888' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  padding-right: 28px;
+}
+
+select option {
+  background: #262626;
+  color: #dcddde;
+}
+
+.checkbox-field label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  text-transform: none;
+  letter-spacing: normal;
+  color: #dcddde;
+  cursor: pointer;
+}
+
+.checkbox-field input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: #7f6df2;
+  cursor: pointer;
+}
+
+.clip-btn {
+  width: 100%;
+  padding: 10px 0;
+  background: #7f6df2;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  margin-top: 4px;
+}
+
+.clip-btn:hover {
+  background: #6c5ce7;
+}
+
+.clip-btn:active {
+  transform: scale(0.98);
+}
+
+.clip-btn:disabled {
+  background: #444;
+  color: #888;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.status {
+  margin-top: 12px;
+  padding: 8px 10px;
+  background: #262626;
+  border-radius: 6px;
+  font-size: 12px;
+  color: #888;
+  text-align: center;
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.status.success {
+  color: #44cf6c;
+  background: #1a2e1f;
+}
+
+.status.error {
+  color: #e74c3c;
+  background: #2e1a1a;
+}
+
+.status.working {
+  color: #f0c674;
+  background: #2e2a1a;
+}

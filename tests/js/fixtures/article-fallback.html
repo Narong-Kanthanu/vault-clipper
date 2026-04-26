@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>No Article Tag Here</title>
+</head>
+<body>
+  <div class="header"><a href="/x">home</a> <a href="/y">about</a> <a href="/z">posts</a></div>
+  <div class="sidebar">
+    <a href="/a">link</a><a href="/b">link</a><a href="/c">link</a>
+    <a href="/d">link</a><a href="/e">link</a><a href="/f">link</a>
+  </div>
+  <div class="content">
+    <h1>Heuristic Test Page</h1>
+    <p>This page has no article tag. The extractor should fall back to the
+    div with the most prose-like text. It should pick this div, not the link
+    farms above, because the score is text length minus twice the link-text
+    length. We pad this paragraph with enough plain prose to comfortably
+    exceed two hundred characters and beat the noisy navigation siblings.</p>
+    <p>A second paragraph adds more substance so the heuristic is decisive.</p>
+  </div>
+  <footer>boilerplate</footer>
+</body>
+</html>

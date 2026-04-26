@@ -5,6 +5,8 @@ const STORAGE_DEFAULTS = {
   downloadImages: true
 };
 
+const { sanitizeFilename, escapeYaml, extractPageContent, buildFrontmatter } = self.VaultClipperUtils;
+
 const needsSetupEl = document.getElementById('needs-setup');
 const mainEl = document.getElementById('main');
 const vaultToggleEl = document.getElementById('vault-toggle');
@@ -139,29 +141,7 @@ clipBtn.addEventListener('click', async () => {
     const now = new Date().toISOString().replace(/\.\d{3}Z$/, '+00:00');
     if (!tags.includes('clippings')) tags.unshift('clippings');
 
-    let frontmatter = '---\n';
-    frontmatter += `title: "${escapeYaml(pageTitle)}"\n`;
-    frontmatter += `source: "${pageUrl}"\n`;
-    if (extracted.author) {
-      const authors = extracted.author.split(/,\s*/).map(a => a.trim()).filter(Boolean);
-      frontmatter += 'author:\n';
-      authors.forEach(a => {
-        frontmatter += `  - "[[${escapeYaml(a)}]]"\n`;
-      });
-    }
-    if (extracted.published) {
-      frontmatter += `published: ${extracted.published}\n`;
-    }
-    frontmatter += `created: ${now}\n`;
-    if (extracted.description) {
-      frontmatter += `description: "${escapeYaml(extracted.description)}"\n`;
-    }
-    frontmatter += 'tags:\n';
-    tags.forEach(t => {
-      frontmatter += `  - "${t}"\n`;
-    });
-    frontmatter += '---\n\n';
-
+    const frontmatter = buildFrontmatter({ pageTitle, pageUrl, extracted, tags, now });
     const fullContent = frontmatter + markdown;
     const images = extracted.images || [];
 
@@ -193,99 +173,6 @@ clipBtn.addEventListener('click', async () => {
     clipBtn.disabled = false;
   }
 });
-
-function extractPageContent() {
-  let container = document.querySelector('article');
-  if (!container) container = document.querySelector('[role="main"]');
-  if (!container) container = document.querySelector('main');
-
-  if (!container) {
-    const candidates = document.querySelectorAll('div, section');
-    let bestScore = 0;
-    candidates.forEach(el => {
-      const text = el.textContent || '';
-      const links = el.querySelectorAll('a');
-      const textLen = text.trim().length;
-      const linkTextLen = Array.from(links).reduce((sum, a) => sum + (a.textContent || '').length, 0);
-      const score = textLen - (linkTextLen * 2);
-      if (score > bestScore && textLen > 200) {
-        bestScore = score;
-        container = el;
-      }
-    });
-  }
-
-  if (!container) container = document.body;
-
-  const clone = container.cloneNode(true);
-  const removeSelectors = 'script, style, nav, footer, aside, noscript, iframe, .ad, .ads, .advertisement, .social-share, .share-buttons, .comments, .comment-section, [aria-hidden="true"]';
-  clone.querySelectorAll(removeSelectors).forEach(el => el.remove());
-
-  const ogTitle = document.querySelector('meta[property="og:title"]');
-  const title = ogTitle ? ogTitle.content : document.title;
-
-  let author = '';
-  const authorMeta = document.querySelector('meta[name="author"]') ||
-                     document.querySelector('meta[property="article:author"]');
-  if (authorMeta) {
-    author = authorMeta.content;
-  } else {
-    const authorEl = document.querySelector('[rel="author"], .author, .byline, [class*="author"]');
-    if (authorEl) author = authorEl.textContent.trim();
-  }
-
-  let published = '';
-  const publishedMeta = document.querySelector('meta[property="article:published_time"]') ||
-                        document.querySelector('meta[name="date"]') ||
-                        document.querySelector('meta[name="publication_date"]');
-  if (publishedMeta) {
-    const parsed = new Date(publishedMeta.content);
-    if (!isNaN(parsed)) published = parsed.toISOString().split('T')[0];
-  } else {
-    const timeEl = document.querySelector('time[datetime]');
-    if (timeEl) {
-      const parsed = new Date(timeEl.getAttribute('datetime'));
-      if (!isNaN(parsed)) published = parsed.toISOString().split('T')[0];
-    }
-  }
-
-  let description = '';
-  const descMeta = document.querySelector('meta[name="description"]') ||
-                   document.querySelector('meta[property="og:description"]');
-  if (descMeta) description = descMeta.content || '';
-
-  const images = [];
-  clone.querySelectorAll('img').forEach((img, i) => {
-    const src = img.src || img.dataset.src || '';
-    if (src && !src.startsWith('data:')) {
-      try {
-        const absoluteUrl = new URL(src, document.baseURI).href;
-        images.push({ url: absoluteUrl, alt: img.alt || '', index: i });
-      } catch (e) {}
-    }
-  });
-
-  return {
-    title: title || '',
-    author: author || '',
-    published,
-    description,
-    html: clone.innerHTML,
-    images
-  };
-}
-
-function sanitizeFilename(str) {
-  return str
-    .replace(/[\/\\:*?"<>|]/g, '')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .slice(0, 200);
-}
-
-function escapeYaml(str) {
-  return str.replace(/"/g, '\\"').replace(/\n/g, ' ');
-}
 
 function setStatus(msg, type) {
   statusEl.textContent = msg;

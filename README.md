@@ -146,11 +146,18 @@ After pulling extension-only changes, just click the reload icon on the extensio
 ├── popup/                        # Toolbar popup (vault toggle, title, tags)
 ├── options/                      # Settings page (vault config)
 ├── background/service-worker.js  # Bridges popup ↔ native host
-├── lib/turndown.js               # Vendored HTML→Markdown (v7.2)
+├── lib/
+│   ├── turndown.js               # Vendored HTML→Markdown (v7.2)
+│   └── clip-utils.js             # Pure helpers (sanitize, frontmatter, extract)
 ├── icons/                        # Extension icons
 ├── native-host/
 │   ├── vault_clipper_host.py     # Writes .md files + downloads images
 │   └── com.vaultclipper.host.json
+├── tests/
+│   ├── js/                       # node:test + jsdom (extract, turndown, utils)
+│   └── python/                   # pytest (path safety, host I/O, image rewriting)
+├── .github/workflows/            # CI (lint + tests) and auto-release
+├── package.json                  # jsdom dev dep for JS tests
 └── install.sh                    # Registers native host
 ```
 
@@ -199,6 +206,26 @@ Vault Clipper makes **zero network requests** to any third party. The only outbo
 
 - [Obsidian Web Clipper](https://obsidian.md/clipper) — the official clipper. Same output format; requires the Obsidian app.
 - [Andrej Karpathy's LLM Wiki pattern](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f) — the inspiration for storing clips as a curated wiki.
+
+## Development
+
+### Running tests locally
+
+```bash
+# JavaScript suite — node:test + jsdom + the vendored Turndown bundle
+npm ci
+node --test 'tests/js/**/*.test.js'
+
+# Python suite — pytest against the native host
+pip install pytest
+pytest tests/python -v
+```
+
+Both suites run automatically on every PR via [`.github/workflows/ci.yml`](.github/workflows/ci.yml) — JS on Node 20, Python on a 3.9 → 3.13 matrix. The aggregate `CI / required` job is the one to set as a required check in branch protection.
+
+### Releasing
+
+A new release is cut automatically when a versioned heading is added to [`CHANGELOG.md`](CHANGELOG.md) on `main`. The workflow at [`.github/workflows/release.yml`](.github/workflows/release.yml) parses the latest `## [X.Y.Z]` heading, verifies it matches `manifest.json`, tags `vX.Y.Z`, and publishes a GitHub release with notes extracted from the changelog and a packaged extension zip attached.
 
 ## Contributing
 

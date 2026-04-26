@@ -1,0 +1,12 @@
+{
+  "name": "vault-clipper",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Browser extension that clips web pages as Obsidian-compatible markdown.",
+  "scripts": {
+    "test": "node --test tests/js"
+  },
+  "devDependencies": {
+    "jsdom": "^24.1.3"
+  }
+}

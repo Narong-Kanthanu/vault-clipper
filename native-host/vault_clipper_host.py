@@ -70,6 +70,25 @@ def download_image(url, save_path, timeout=10, max_size=10 * 1024 * 1024):
         return False
 
 
+def safe_relative_subpath(parts):
+    """Validate that `parts` is a safe relative subpath (no abs paths, no `..`)."""
+    p = Path(parts)
+    if p.is_absolute():
+        raise ValueError(f"absolute paths are not allowed: {parts!r}")
+    if any(part == ".." for part in p.parts):
+        raise ValueError(f"parent traversal not allowed: {parts!r}")
+    return p
+
+
+def safe_filename(name):
+    """Validate a single filename: no path separators, no `..`, not empty."""
+    if not name or name in (".", ".."):
+        raise ValueError(f"invalid filename: {name!r}")
+    if "/" in name or "\\" in name:
+        raise ValueError(f"filename contains path separator: {name!r}")
+    return name
+
+
 def unique_filepath(filepath):
     """If filepath exists, append -2, -3, etc. until unique."""
     if not filepath.exists():
@@ -98,6 +117,12 @@ def handle_clip(msg):
     images = msg.get('images', [])
     download_imgs = msg.get('download_images', False)
 
+    try:
+        safe_folder = safe_relative_subpath(folder)
+        safe_name = safe_filename(filename)
+    except ValueError as e:
+        return {'success': False, 'error': str(e)}
+
     if not vault_path.exists():
         return {
             'success': False,
@@ -105,7 +130,7 @@ def handle_clip(msg):
         }
 
     # Target: {vault_path}/{folder}/
-    target_dir = vault_path / folder
+    target_dir = vault_path / safe_folder
     target_dir.mkdir(parents=True, exist_ok=True)
 
     # Assets: {vault_path}/{folder}/assets/
@@ -114,7 +139,7 @@ def handle_clip(msg):
 
     images_downloaded = 0
     if download_imgs and images:
-        article_slug = Path(filename).stem
+        article_slug = Path(safe_name).stem
         for img in images:
             url = img.get('url', '')
             if not url:
@@ -133,7 +158,7 @@ def handle_clip(msg):
                     content
                 )
 
-    filepath = unique_filepath(target_dir / filename)
+    filepath = unique_filepath(target_dir / safe_name)
     with open(filepath, 'w', encoding='utf-8') as f:
         f.write(content)
 

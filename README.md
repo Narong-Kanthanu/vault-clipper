@@ -136,7 +136,7 @@ After pulling new changes that touch `native-host/vault_clipper_host.py`, re-run
 ./install.sh --extension-id <YOUR_EXTENSION_ID>
 ```
 
-After pulling extension-only changes, just click the reload icon on the extension's card in `brave://extensions/`.
+After pulling extension-only changes, just click the reload icon on the extension's card in `chrome://extensions/` (or `brave://extensions/`).
 
 ## Project layout
 
@@ -165,13 +165,16 @@ After pulling extension-only changes, just click the reload icon on the extensio
 
 ### "Specified native messaging host not found"
 
-- Re-run `install.sh` with the correct extension ID
+- Re-run `install.sh` with the correct extension ID. The script auto-detects Brave / Chrome / Chromium and registers for whichever it finds; pass `--brave` / `--chrome` / `--chromium` to force.
 - **Fully** quit and reopen the browser (Cmd+Q on macOS)
-- Verify the manifest exists:
+- Verify the manifest exists for the browser you're using:
   ```bash
+  # Chrome
+  cat ~/Library/Application\ Support/Google/Chrome/NativeMessagingHosts/com.vaultclipper.host.json
+  # Brave
   cat ~/Library/Application\ Support/BraveSoftware/Brave-Browser/NativeMessagingHosts/com.vaultclipper.host.json
   ```
-- Verify the `chrome-extension://...` ID inside that file matches the one shown in `brave://extensions/`
+- Verify the `chrome-extension://...` ID inside that file matches the one shown in `chrome://extensions/` (or `brave://extensions/`). Unpacked-extension IDs are derived from the load path, so loading the same folder into both browsers gives the same ID.
 
 ### "Native host has exited"
 

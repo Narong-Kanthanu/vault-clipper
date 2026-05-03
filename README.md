@@ -94,12 +94,12 @@ cd vault-clipper
 ./install.sh --extension-id <YOUR_EXTENSION_ID>
 ```
 
-This copies the host script to `~/.config/vault-clipper/` and registers it with the browser. The script must live outside `~/Documents/` because macOS sandboxed browsers cannot execute files from protected folders.
+This copies the host script to `~/.config/vault-clipper/` and registers it with whichever Chromium-based browsers are installed (auto-detected via `/Applications` and `~/Applications`). The script must live outside `~/Documents/` because macOS sandboxed browsers cannot execute files from protected folders.
 
 | Flag | Purpose |
 |---|---|
 | `--extension-id <ID>` | Pass the ID non-interactively |
-| `--chrome` | Also register for Chrome (default registers Brave + Chromium) |
+| `--brave` / `--chrome` / `--chromium` | Force-register for the named browsers (overrides auto-detection) |
 | `--uninstall` | Remove native host registration and `~/.config/vault-clipper/` |
 
 ### Step 3 — fully restart the browser

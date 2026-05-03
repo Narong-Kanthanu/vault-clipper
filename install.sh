@@ -1,7 +1,9 @@
 #!/bin/bash
 #
 # Vault Clipper — Native Messaging Host Installer
-# Registers the native host with Brave (and optionally Chrome) on macOS.
+# Auto-detects which Chromium-based browsers are installed (Brave, Chrome,
+# Chromium) and registers the native host with each. Pass --brave/--chrome/
+# --chromium to override detection and force registration for specific browsers.
 #
 # IMPORTANT: The native host script is copied to ~/.config/vault-clipper/
 # because macOS sandboxed browsers (Brave/Chrome) cannot execute scripts
@@ -9,8 +11,8 @@
 #
 # Usage:
 #   ./install.sh                          # Interactive (prompts for extension ID)
-#   ./install.sh --extension-id ABC123    # Non-interactive
-#   ./install.sh --chrome                 # Also register for Chrome
+#   ./install.sh --extension-id ABC123    # Non-interactive — auto-detects installed browsers
+#   ./install.sh --brave --chrome         # Force-register for specific browsers (skips detection)
 #   ./install.sh --uninstall              # Remove native host registration
 
 set -euo pipefail
@@ -27,7 +29,9 @@ CHROME_NM_DIR="$HOME/Library/Application Support/Google/Chrome/NativeMessagingHo
 CHROMIUM_NM_DIR="$HOME/Library/Application Support/Chromium/NativeMessagingHosts"
 
 EXTENSION_ID=""
-INSTALL_CHROME=false
+EXPLICIT_BRAVE=false
+EXPLICIT_CHROME=false
+EXPLICIT_CHROMIUM=false
 UNINSTALL=false
 
 # Parse arguments
@@ -37,8 +41,16 @@ while [[ $# -gt 0 ]]; do
       EXTENSION_ID="$2"
       shift 2
       ;;
+    --brave)
+      EXPLICIT_BRAVE=true
+      shift
+      ;;
     --chrome)
-      INSTALL_CHROME=true
+      EXPLICIT_CHROME=true
+      shift
+      ;;
+    --chromium)
+      EXPLICIT_CHROMIUM=true
       shift
       ;;
     --uninstall)
@@ -47,11 +59,17 @@ while [[ $# -gt 0 ]]; do
       ;;
     *)
       echo "Unknown option: $1"
-      echo "Usage: ./install.sh [--extension-id ID] [--chrome] [--uninstall]"
+      echo "Usage: ./install.sh [--extension-id ID] [--brave] [--chrome] [--chromium] [--uninstall]"
       exit 1
       ;;
   esac
 done
+
+# Detect a browser by app bundle in /Applications or ~/Applications.
+detect_app() {
+  local name="$1"
+  [[ -d "/Applications/$name.app" || -d "$HOME/Applications/$name.app" ]]
+}
 
 # --- Uninstall ---
 if $UNINSTALL; then
@@ -122,28 +140,53 @@ generate_manifest() {
 EOF
 }
 
-# Install for Brave
-mkdir -p "$BRAVE_NM_DIR"
-generate_manifest > "$BRAVE_NM_DIR/$HOST_NAME.json"
-echo "Installed for Brave"
+# Decide which browsers to register for.
+# If any --brave/--chrome/--chromium flag was given, only those (explicit override).
+# Otherwise auto-detect by looking for the app bundle.
+if $EXPLICIT_BRAVE || $EXPLICIT_CHROME || $EXPLICIT_CHROMIUM; then
+  INSTALL_BRAVE=$EXPLICIT_BRAVE
+  INSTALL_CHROME=$EXPLICIT_CHROME
+  INSTALL_CHROMIUM=$EXPLICIT_CHROMIUM
+else
+  if detect_app "Brave Browser"; then INSTALL_BRAVE=true; else INSTALL_BRAVE=false; fi
+  if detect_app "Google Chrome"; then INSTALL_CHROME=true; else INSTALL_CHROME=false; fi
+  if detect_app "Chromium";       then INSTALL_CHROMIUM=true; else INSTALL_CHROMIUM=false; fi
+fi
 
-# Install for Chromium (Brave also checks this path)
-mkdir -p "$CHROMIUM_NM_DIR"
-generate_manifest > "$CHROMIUM_NM_DIR/$HOST_NAME.json"
-echo "Installed for Chromium"
+if ! $INSTALL_BRAVE && ! $INSTALL_CHROME && ! $INSTALL_CHROMIUM; then
+  echo "Error: no Chromium-based browser found in /Applications or ~/Applications."
+  echo "Pass --brave, --chrome, or --chromium to force registration."
+  exit 1
+fi
 
-# Optionally install for Chrome
+INSTALLED_FOR=()
+
+if $INSTALL_BRAVE; then
+  mkdir -p "$BRAVE_NM_DIR"
+  generate_manifest > "$BRAVE_NM_DIR/$HOST_NAME.json"
+  echo "Installed for Brave"
+  INSTALLED_FOR+=("Brave")
+fi
+
 if $INSTALL_CHROME; then
   mkdir -p "$CHROME_NM_DIR"
   generate_manifest > "$CHROME_NM_DIR/$HOST_NAME.json"
   echo "Installed for Chrome"
+  INSTALLED_FOR+=("Chrome")
+fi
+
+if $INSTALL_CHROMIUM; then
+  mkdir -p "$CHROMIUM_NM_DIR"
+  generate_manifest > "$CHROMIUM_NM_DIR/$HOST_NAME.json"
+  echo "Installed for Chromium"
+  INSTALLED_FOR+=("Chromium")
 fi
 
 echo ""
 echo "=== Installation complete ==="
 echo ""
 echo "Next steps:"
-echo "  1. Quit Brave completely (Cmd+Q) and reopen"
+echo "  1. Fully quit ${INSTALLED_FOR[*]} (Cmd+Q on macOS) and reopen"
 echo "  2. Navigate to any web page"
 echo "  3. Click the Vault Clipper icon to clip"
 echo ""

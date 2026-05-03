@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Settings tab now closes itself shortly after a successful save, returning the user to whatever they were doing.
+
+### Fixed
+
+- Settings page can now be opened from the popup in Chrome. The manifest was missing an `options_ui` entry, so `chrome.runtime.openOptionsPage()` silently failed and the popup's ⚙ button and "Open Settings" CTA did nothing on Chrome.
+- `install.sh` now auto-detects which Chromium-based browsers (Brave, Chrome, Chromium) are installed and registers the native messaging host for each. Previously the script defaulted to Brave + Chromium and silently skipped Chrome unless `--chrome` was passed, leaving Chrome users with "Specified native messaging host not found" on first clip. Pass `--brave` / `--chrome` / `--chromium` to override detection.
+
 ## [1.0.0] — 2026-04-26
 
 ### Added

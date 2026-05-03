@@ -1,8 +1,12 @@
+'use strict';
+
 const DEFAULTS = {
   vaults: [],
   defaultFolder: 'raw',
   downloadImages: true
 };
+
+// --- DOM handles -----------------------------------------------------------
 
 const vaultsList = document.getElementById('vaults-list');
 const addVaultBtn = document.getElementById('add-vault');
@@ -15,6 +19,8 @@ const rowTemplate = document.getElementById('vault-row-template');
 function makeId() {
   return Math.random().toString(36).slice(2, 10);
 }
+
+// --- Form rows -------------------------------------------------------------
 
 function addVaultRow(vault = { id: makeId(), label: '', path: '' }) {
   const node = rowTemplate.content.firstElementChild.cloneNode(true);
@@ -39,17 +45,7 @@ function readVaultsFromForm() {
   return vaults;
 }
 
-async function loadSettings() {
-  const stored = await chrome.storage.local.get(DEFAULTS);
-  vaultsList.innerHTML = '';
-  const vaults = Array.isArray(stored.vaults) && stored.vaults.length > 0
-    ? stored.vaults
-    : [{ id: makeId(), label: 'Personal', path: '' }];
-  vaults.forEach(addVaultRow);
-
-  defaultFolderInput.value = stored.defaultFolder || DEFAULTS.defaultFolder;
-  downloadImagesInput.checked = stored.downloadImages !== false;
-}
+// --- UI feedback -----------------------------------------------------------
 
 function showStatus(message, kind = '') {
   saveStatus.textContent = message;
@@ -60,6 +56,20 @@ function showStatus(message, kind = '') {
       saveStatus.className = 'save-status';
     }, 2500);
   }
+}
+
+// --- Storage I/O -----------------------------------------------------------
+
+async function loadSettings() {
+  const stored = await chrome.storage.local.get(DEFAULTS);
+  vaultsList.replaceChildren();
+  const vaults = Array.isArray(stored.vaults) && stored.vaults.length > 0
+    ? stored.vaults
+    : [{ id: makeId(), label: 'Personal', path: '' }];
+  vaults.forEach(addVaultRow);
+
+  defaultFolderInput.value = stored.defaultFolder || DEFAULTS.defaultFolder;
+  downloadImagesInput.checked = stored.downloadImages !== false;
 }
 
 async function saveSettings() {
@@ -83,7 +93,10 @@ async function saveSettings() {
     selectedVaultId
   });
   showStatus('Saved.', 'success');
+  setTimeout(() => window.close(), 600);
 }
+
+// --- Bootstrap -------------------------------------------------------------
 
 addVaultBtn.addEventListener('click', () => addVaultRow());
 saveBtn.addEventListener('click', saveSettings);

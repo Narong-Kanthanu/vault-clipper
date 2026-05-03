@@ -1,3 +1,5 @@
+'use strict';
+
 const STORAGE_DEFAULTS = {
   vaults: [],
   selectedVaultId: null,
@@ -5,20 +7,87 @@ const STORAGE_DEFAULTS = {
   downloadImages: true
 };
 
-const { sanitizeFilename, escapeYaml, extractPageContent, buildFrontmatter } = self.VaultClipperUtils;
+// --- Storage ---------------------------------------------------------------
 
-const needsSetupEl = document.getElementById('needs-setup');
-const mainEl = document.getElementById('main');
-const vaultToggleEl = document.getElementById('vault-toggle');
-const titleInput = document.getElementById('title-input');
-const tagsInput = document.getElementById('tags-input');
-const downloadImagesInput = document.getElementById('download-images');
-const clipBtn = document.getElementById('clip-btn');
-const statusEl = document.getElementById('status');
-const openOptionsBtn = document.getElementById('open-options');
-const openOptionsCtaBtn = document.getElementById('open-options-cta');
+async function loadSettings() {
+  const stored = await chrome.storage.local.get(STORAGE_DEFAULTS);
+  return { ...STORAGE_DEFAULTS, ...stored };
+}
 
-let settings = { ...STORAGE_DEFAULTS };
+function saveSetting(partial) {
+  return chrome.storage.local.set(partial);
+}
+
+// --- Active tab ------------------------------------------------------------
+
+async function getActiveTab() {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  return tab || null;
+}
+
+async function runInTab(tab, func) {
+  const results = await chrome.scripting.executeScript({ target: { tabId: tab.id }, func });
+  return results && results[0] ? results[0].result : null;
+}
+
+// Runs in the target page; must be self-contained (chrome.scripting serializes it).
+function readTitleMetaInPage() {
+  const ogTitle = document.querySelector('meta[property="og:title"]');
+  return { title: (ogTitle ? ogTitle.content : document.title) || '' };
+}
+
+// --- DOM handles -----------------------------------------------------------
+
+const els = {
+  needsSetup: document.getElementById('needs-setup'),
+  main: document.getElementById('main'),
+  vaultToggle: document.getElementById('vault-toggle'),
+  titleInput: document.getElementById('title-input'),
+  tagsInput: document.getElementById('tags-input'),
+  downloadImages: document.getElementById('download-images'),
+  clipBtn: document.getElementById('clip-btn'),
+  status: document.getElementById('status'),
+  openOptionsBtn: document.getElementById('open-options'),
+  openOptionsCtaBtn: document.getElementById('open-options-cta')
+};
+
+// --- UI --------------------------------------------------------------------
+
+function renderVaultButtons(vaults, selectedId, onSelect) {
+  els.vaultToggle.replaceChildren();
+  vaults.forEach(vault => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'vault-btn' + (vault.id === selectedId ? ' active' : '');
+    btn.dataset.vaultId = vault.id;
+    btn.textContent = vault.label;
+    btn.addEventListener('click', () => onSelect(vault.id));
+    els.vaultToggle.appendChild(btn);
+  });
+}
+
+function highlightSelectedVault(vaultId) {
+  els.vaultToggle.querySelectorAll('.vault-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.vaultId === vaultId);
+  });
+}
+
+function setStatus(msg, type) {
+  els.status.textContent = msg;
+  els.status.className = 'status' + (type ? ' ' + type : '');
+}
+
+function showSetupPrompt() {
+  els.needsSetup.hidden = false;
+  els.main.hidden = true;
+}
+
+function showMain() {
+  els.needsSetup.hidden = true;
+  els.main.hidden = false;
+}
+
+// --- Open options ----------------------------------------------------------
 
 function openOptions() {
   if (chrome.runtime.openOptionsPage) {
@@ -28,35 +97,75 @@ function openOptions() {
   }
 }
 
-openOptionsBtn.addEventListener('click', openOptions);
-openOptionsCtaBtn.addEventListener('click', openOptions);
+// --- Clip orchestrator -----------------------------------------------------
 
-function renderVaultButtons() {
-  vaultToggleEl.innerHTML = '';
-  settings.vaults.forEach(vault => {
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'vault-btn' + (vault.id === settings.selectedVaultId ? ' active' : '');
-    btn.dataset.vaultId = vault.id;
-    btn.textContent = vault.label;
-    btn.addEventListener('click', () => {
-      settings.selectedVaultId = vault.id;
-      chrome.storage.local.set({ selectedVaultId: vault.id });
-      vaultToggleEl.querySelectorAll('.vault-btn').forEach(b => {
-        b.classList.toggle('active', b.dataset.vaultId === vault.id);
-      });
+let settings = { ...STORAGE_DEFAULTS };
+
+async function clipActiveTab() {
+  els.clipBtn.disabled = true;
+  setStatus('Extracting page content...', 'working');
+
+  try {
+    const vault = settings.vaults.find(v => v.id === settings.selectedVaultId);
+    if (!vault) throw new Error('No vault selected');
+    if (!vault.path) throw new Error('Selected vault has no path configured');
+
+    const tab = await getActiveTab();
+    if (!tab) throw new Error('No active tab found');
+
+    const extracted = await runInTab(tab, self.VaultClipperUtils.extractPageContent);
+    if (!extracted) throw new Error('Failed to extract page content');
+
+    const payload = self.VaultClipperClipper.buildClipPayload({
+      extracted,
+      pageUrl: tab.url,
+      pageTitle: els.titleInput.value,
+      rawTags: els.tagsInput.value
     });
-    vaultToggleEl.appendChild(btn);
-  });
+
+    setStatus('Saving to vault...', 'working');
+
+    const folder = settings.defaultFolder || 'raw';
+    const response = await chrome.runtime.sendMessage({
+      action: 'save-to-vault',
+      vaultPath: vault.path,
+      folder,
+      filename: payload.filename,
+      content: payload.content,
+      images: payload.images,
+      downloadImages: els.downloadImages.checked
+    });
+
+    if (!response || !response.success) {
+      throw new Error(response ? response.error : 'No response from native host');
+    }
+
+    const imgMsg = response.images_downloaded > 0
+      ? ` | ${response.images_downloaded} images saved`
+      : '';
+    setStatus(`Clipped to ${vault.label}/${folder}/${payload.filename}${imgMsg}`, 'success');
+  } catch (err) {
+    setStatus(`Error: ${err.message}`, 'error');
+    console.error('Vault Clipper error:', err);
+  } finally {
+    els.clipBtn.disabled = false;
+  }
 }
 
+// --- Bootstrap -------------------------------------------------------------
+
 async function init() {
-  const stored = await chrome.storage.local.get(STORAGE_DEFAULTS);
-  settings = { ...STORAGE_DEFAULTS, ...stored };
+  els.openOptionsBtn.addEventListener('click', openOptions);
+  els.openOptionsCtaBtn.addEventListener('click', openOptions);
+  els.clipBtn.addEventListener('click', clipActiveTab);
+  els.downloadImages.addEventListener('change', () => {
+    saveSetting({ downloadImages: els.downloadImages.checked });
+  });
+
+  settings = await loadSettings();
 
   if (!Array.isArray(settings.vaults) || settings.vaults.length === 0) {
-    needsSetupEl.hidden = false;
-    mainEl.hidden = true;
+    showSetupPrompt();
     return;
   }
 
@@ -64,119 +173,23 @@ async function init() {
     settings.selectedVaultId = settings.vaults[0].id;
   }
 
-  needsSetupEl.hidden = true;
-  mainEl.hidden = false;
+  showMain();
+  renderVaultButtons(settings.vaults, settings.selectedVaultId, vaultId => {
+    settings.selectedVaultId = vaultId;
+    saveSetting({ selectedVaultId: vaultId });
+    highlightSelectedVault(vaultId);
+  });
+  els.downloadImages.checked = settings.downloadImages !== false;
 
-  renderVaultButtons();
-  downloadImagesInput.checked = settings.downloadImages !== false;
-
-  // Extract page title from active tab
   try {
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    const tab = await getActiveTab();
     if (tab) {
-      const results = await chrome.scripting.executeScript({
-        target: { tabId: tab.id },
-        func: extractMeta
-      });
-      if (results && results[0] && results[0].result) {
-        titleInput.value = results[0].result.title || '';
-      }
+      const meta = await runInTab(tab, readTitleMetaInPage);
+      els.titleInput.value = (meta && meta.title) || '';
     }
   } catch (e) {
-    titleInput.value = '';
+    els.titleInput.value = '';
   }
-}
-
-function extractMeta() {
-  const ogTitle = document.querySelector('meta[property="og:title"]');
-  const title = ogTitle ? ogTitle.content : document.title;
-  return { title: title || '' };
-}
-
-downloadImagesInput.addEventListener('change', () => {
-  chrome.storage.local.set({ downloadImages: downloadImagesInput.checked });
-});
-
-clipBtn.addEventListener('click', async () => {
-  clipBtn.disabled = true;
-  setStatus('Extracting page content...', 'working');
-
-  try {
-    const selectedVault = settings.vaults.find(v => v.id === settings.selectedVaultId);
-    if (!selectedVault) throw new Error('No vault selected');
-    if (!selectedVault.path) throw new Error('Selected vault has no path configured');
-
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    if (!tab) throw new Error('No active tab found');
-
-    const results = await chrome.scripting.executeScript({
-      target: { tabId: tab.id },
-      func: extractPageContent
-    });
-
-    if (!results || !results[0] || !results[0].result) {
-      throw new Error('Failed to extract page content');
-    }
-
-    const extracted = results[0].result;
-    const pageTitle = titleInput.value.trim() || extracted.title || 'untitled';
-    const pageUrl = tab.url;
-
-    const tags = tagsInput.value
-      .split(',')
-      .map(t => t.trim().toLowerCase().replace(/\s+/g, '-'))
-      .filter(t => t.length > 0);
-
-    const filename = sanitizeFilename(pageTitle) + '.md';
-
-    const turndownService = new TurndownService({
-      headingStyle: 'atx',
-      codeBlockStyle: 'fenced',
-      bulletListMarker: '-',
-      emDelimiter: '*'
-    });
-    turndownService.remove(['script', 'style', 'nav', 'footer', 'aside', 'noscript']);
-    const markdown = turndownService.turndown(extracted.html);
-
-    const now = new Date().toISOString().replace(/\.\d{3}Z$/, '+00:00');
-    if (!tags.includes('clippings')) tags.unshift('clippings');
-
-    const frontmatter = buildFrontmatter({ pageTitle, pageUrl, extracted, tags, now });
-    const fullContent = frontmatter + markdown;
-    const images = extracted.images || [];
-
-    setStatus('Saving to vault...', 'working');
-
-    const folder = settings.defaultFolder || 'raw';
-    const response = await chrome.runtime.sendMessage({
-      action: 'save-to-vault',
-      vaultPath: selectedVault.path,
-      folder,
-      filename,
-      content: fullContent,
-      images,
-      downloadImages: downloadImagesInput.checked
-    });
-
-    if (response && response.success) {
-      const imgMsg = response.images_downloaded > 0
-        ? ` | ${response.images_downloaded} images saved`
-        : '';
-      setStatus(`Clipped to ${selectedVault.label}/${folder}/${filename}${imgMsg}`, 'success');
-    } else {
-      throw new Error(response ? response.error : 'No response from native host');
-    }
-  } catch (err) {
-    setStatus(`Error: ${err.message}`, 'error');
-    console.error('Vault Clipper error:', err);
-  } finally {
-    clipBtn.disabled = false;
-  }
-});
-
-function setStatus(msg, type) {
-  statusEl.textContent = msg;
-  statusEl.className = 'status' + (type ? ' ' + type : '');
 }
 
 init();

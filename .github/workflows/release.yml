@@ -1,25 +1,41 @@
 name: Release
 
+# Fires when a PR from a release/* branch (touching CHANGELOG.md) is merged
+# into main. workflow_dispatch is a manual fallback for re-runs (e.g. if the
+# GitHub Release step fails after the tag was already pushed).
 on:
-  push:
+  pull_request:
+    types: [closed]
     branches: [main]
     paths:
       - 'CHANGELOG.md'
+  workflow_dispatch:
 
 permissions:
   contents: write
 
+# Constant group so a manual workflow_dispatch can't race a concurrent
+# pull_request run (they'd otherwise be in different ref-keyed groups).
 concurrency:
-  group: release-${{ github.ref }}
+  group: release-main
   cancel-in-progress: false
 
 jobs:
   release:
-    name: Auto-release on CHANGELOG update
+    name: Auto-release from release/* PR merge
     runs-on: ubuntu-latest
+    # Skip closed-without-merge and PRs from non-release branches.
+    # workflow_dispatch always runs.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.pull_request.merged == true &&
+       startsWith(github.event.pull_request.head.ref, 'release/'))
     steps:
       - uses: actions/checkout@v4
         with:
+          # Always release the post-merge state on main, regardless of which
+          # ref triggered the workflow.
+          ref: main
           fetch-depth: 0
 
       - name: Parse latest released version from CHANGELOG
@@ -39,33 +55,59 @@ jobs:
           echo "Detected version: $version"
 
       - name: Verify manifest.json version matches
+        env:
+          VERSION: ${{ steps.parse.outputs.version }}
         run: |
           set -euo pipefail
           mv=$(jq -r '.version' manifest.json)
-          if [ "$mv" != "${{ steps.parse.outputs.version }}" ]; then
-            echo "::error file=manifest.json::manifest version ($mv) does not match CHANGELOG (${{ steps.parse.outputs.version }})"
+          if [ "$mv" != "$VERSION" ]; then
+            echo "::error file=manifest.json::manifest version ($mv) does not match CHANGELOG ($VERSION)"
             exit 1
           fi
 
-      - name: Check tag does not already exist
-        id: tagcheck
+      - name: Check tag and release state
+        id: state
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.parse.outputs.tag }}
         run: |
           set -euo pipefail
-          tag="${{ steps.parse.outputs.tag }}"
-          # Local check (full history fetched above) and remote check.
-          if git rev-parse -q --verify "refs/tags/$tag" >/dev/null \
-              || git ls-remote --exit-code --tags origin "$tag" >/dev/null 2>&1; then
-            echo "Tag $tag already exists; skipping release."
+
+          # Tag check: local (full history fetched above) OR remote.
+          if git rev-parse -q --verify "refs/tags/$TAG" >/dev/null \
+              || git ls-remote --exit-code --tags origin "$TAG" >/dev/null 2>&1; then
+            tag_exists=true
+          else
+            tag_exists=false
+          fi
+
+          # Release check: independent of tag, so we can recover a missing
+          # release on an existing tag (e.g. previous run failed mid-way).
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            release_exists=true
+          else
+            release_exists=false
+          fi
+
+          echo "tag_exists=$tag_exists"         >>"$GITHUB_OUTPUT"
+          echo "release_exists=$release_exists" >>"$GITHUB_OUTPUT"
+          echo "Tag $TAG: exists=$tag_exists, release exists=$release_exists"
+
+          if [ "$tag_exists" = "true" ] && [ "$release_exists" = "true" ]; then
+            echo "Both tag and release already present; nothing to do."
             echo "skip=true" >>"$GITHUB_OUTPUT"
           else
             echo "skip=false" >>"$GITHUB_OUTPUT"
           fi
 
       - name: Extract release notes for this version
-        if: steps.tagcheck.outputs.skip == 'false'
+        if: steps.state.outputs.skip == 'false'
+        env:
+          VERSION: ${{ steps.parse.outputs.version }}
+          TAG: ${{ steps.parse.outputs.tag }}
         run: |
           set -euo pipefail
-          awk -v v="${{ steps.parse.outputs.version }}" '
+          awk -v v="$VERSION" '
             index($0, "## [" v "]") == 1 { found=1; next }
             found && /^## \[/        { exit }
             found && /^\[.*\]:[ \t]/ { exit }
@@ -74,37 +116,49 @@ jobs:
           # Trim leading/trailing blank lines.
           sed -i -e '/./,$!d' -e ':a;/^\n*$/{$d;N;ba;}' RELEASE_NOTES.md
           if [ ! -s RELEASE_NOTES.md ]; then
-            echo "Release ${{ steps.parse.outputs.tag }}" > RELEASE_NOTES.md
+            echo "Release $TAG" > RELEASE_NOTES.md
           fi
           echo "----- RELEASE_NOTES.md -----"
           cat RELEASE_NOTES.md
           echo "----- end -----"
 
       - name: Build extension zip
-        if: steps.tagcheck.outputs.skip == 'false'
+        if: steps.state.outputs.skip == 'false'
+        env:
+          VERSION: ${{ steps.parse.outputs.version }}
         run: |
           set -euo pipefail
-          name="vault-clipper-${{ steps.parse.outputs.version }}.zip"
-          zip -r "$name" . \
-            -x '.git/*' '.github/*' '*.zip' 'RELEASE_NOTES.md' '.gitignore'
+          name="vault-clipper-${VERSION}.zip"
+          # Include-list: only files end users need to install and run the
+          # extension + native messaging host. Excludes tests, dev manifests,
+          # contributor-only docs, and CI/build artifacts.
+          zip -r "$name" \
+            manifest.json \
+            background icons lib options popup \
+            native-host \
+            install.sh \
+            README.md LICENSE CHANGELOG.md
           echo "asset=$name" >>"$GITHUB_ENV"
 
       - name: Create and push tag
-        if: steps.tagcheck.outputs.skip == 'false'
+        if: steps.state.outputs.skip == 'false' && steps.state.outputs.tag_exists == 'false'
+        env:
+          TAG: ${{ steps.parse.outputs.tag }}
         run: |
           set -euo pipefail
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git tag -a "${{ steps.parse.outputs.tag }}" -m "Release ${{ steps.parse.outputs.tag }}"
-          git push origin "${{ steps.parse.outputs.tag }}"
+          git tag -a "$TAG" -m "Release $TAG"
+          git push origin "$TAG"
 
       - name: Create GitHub release
-        if: steps.tagcheck.outputs.skip == 'false'
+        if: steps.state.outputs.skip == 'false' && steps.state.outputs.release_exists == 'false'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.parse.outputs.tag }}
         run: |
           set -euo pipefail
-          gh release create "${{ steps.parse.outputs.tag }}" \
-            --title  "Vault Clipper ${{ steps.parse.outputs.tag }}" \
+          gh release create "$TAG" \
+            --title  "Vault Clipper $TAG" \
             --notes-file RELEASE_NOTES.md \
             "$asset"

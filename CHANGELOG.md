@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Settings tab now closes itself shortly after a successful save, returning the user to whatever they were doing.
+
+### Fixed
+
+- Settings page can now be opened from the popup in Chrome. The manifest was missing an `options_ui` entry, so `chrome.runtime.openOptionsPage()` silently failed and the popup's ⚙ button and "Open Settings" CTA did nothing on Chrome.
+
 ## [1.0.0] — 2026-04-26
 
 ### Added

@@ -83,6 +83,7 @@ async function saveSettings() {
     selectedVaultId
   });
   showStatus('Saved.', 'success');
+  setTimeout(() => window.close(), 600);
 }
 
 addVaultBtn.addEventListener('click', () => addVaultRow());

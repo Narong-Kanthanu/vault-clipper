@@ -1,12 +1,20 @@
+<p align="center">
+  <img src="./docs/banner.svg" alt="vault-clipper — clip web pages as Obsidian-compatible markdown" width="720">
+</p>
+
+<p align="center">
+  <a href="https://github.com/Narong-Kanthanu/vault-clipper/actions/workflows/ci.yml"><img src="https://github.com/Narong-Kanthanu/vault-clipper/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="./LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
+  <a href="./manifest.json"><img src="https://img.shields.io/badge/manifest-v3-blue" alt="Manifest V3"></a>
+  <a href="./CONTRIBUTING.md"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg" alt="PRs welcome"></a>
+  <a href="./CODE_OF_CONDUCT.md"><img src="https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg" alt="Contributor Covenant 2.1"></a>
+</p>
+
 # Vault Clipper
 
 A zero-dependency Brave/Chrome extension that clips web pages as Obsidian-compatible markdown files into local folders on your computer — **no Obsidian app, no cloud sync, no telemetry**.
 
 Output frontmatter is interchangeable with [Obsidian Web Clipper](https://obsidian.md/clipper), so clips from both tools live happily side-by-side.
-
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Manifest V3](https://img.shields.io/badge/manifest-v3-blue)](manifest.json)
-[![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
 ---
 
@@ -57,19 +65,19 @@ tags:
 Markdown content with ![[assets/image-name.png]] wikilinks...
 ```
 
-| Field | Format |
-|---|---|
-| Frontmatter | YAML — Obsidian Properties / Dataview compatible |
-| `title` | Quoted text |
-| `source` | Quoted URL |
-| `author` | YAML list with `[[wikilinks]]` |
-| `published` | ISO date (`YYYY-MM-DD`), from page meta |
-| `created` | ISO timestamp (`YYYY-MM-DDTHH:mm:ss+00:00`) |
-| `description` | Quoted meta description |
-| `tags` | YAML list — `clippings` is always first |
-| Images | `![[assets/image-name.png]]` |
-| Filename | Original page title (no kebab-case mangling) |
-| Save location | `<vault folder>/<default folder>/` |
+| Field         | Format                                           |
+| ------------- | ------------------------------------------------ |
+| Frontmatter   | YAML — Obsidian Properties / Dataview compatible |
+| `title`       | Quoted text                                      |
+| `source`      | Quoted URL                                       |
+| `author`      | YAML list with `[[wikilinks]]`                   |
+| `published`   | ISO date (`YYYY-MM-DD`), from page meta          |
+| `created`     | ISO timestamp (`YYYY-MM-DDTHH:mm:ss+00:00`)      |
+| `description` | Quoted meta description                          |
+| `tags`        | YAML list — `clippings` is always first          |
+| Images        | `![[assets/image-name.png]]`                     |
+| Filename      | Original page title (no kebab-case mangling)     |
+| Save location | `<vault folder>/<default folder>/`               |
 
 ## Install
 
@@ -96,11 +104,11 @@ cd vault-clipper
 
 This copies the host script to `~/.config/vault-clipper/` and registers it with whichever Chromium-based browsers are installed (auto-detected via `/Applications` and `~/Applications`). The script must live outside `~/Documents/` because macOS sandboxed browsers cannot execute files from protected folders.
 
-| Flag | Purpose |
-|---|---|
-| `--extension-id <ID>` | Pass the ID non-interactively |
+| Flag                                  | Purpose                                                          |
+| ------------------------------------- | ---------------------------------------------------------------- |
+| `--extension-id <ID>`                 | Pass the ID non-interactively                                    |
 | `--brave` / `--chrome` / `--chromium` | Force-register for the named browsers (overrides auto-detection) |
-| `--uninstall` | Remove native host registration and `~/.config/vault-clipper/` |
+| `--uninstall`                         | Remove native host registration and `~/.config/vault-clipper/`   |
 
 ### Step 3 — fully restart the browser
 
@@ -110,9 +118,9 @@ This copies the host script to `~/.config/vault-clipper/` and registers it with 
 
 The settings page opens automatically on first install. Add one or more vaults:
 
-| Field | Example |
-|---|---|
-| Label | `Personal` |
+| Field       | Example                                |
+| ----------- | -------------------------------------- |
+| Label       | `Personal`                             |
 | Folder path | `/Users/you/Documents/Vaults/Personal` |
 
 The **Default folder** (e.g. `raw`) is the subfolder where clips land. Saved files end up at `<vault path>/<default folder>/<page title>.md`.
@@ -149,7 +157,8 @@ After pulling extension-only changes, just click the reload icon on the extensio
 ├── lib/
 │   ├── turndown.js               # Vendored HTML→Markdown (v7.2)
 │   └── clip-utils.js             # Pure helpers (sanitize, frontmatter, extract)
-├── icons/                        # Extension icons
+├── icons/                        # Extension icons (PNG, 16/32/48/128)
+├── docs/                         # README banner and other static assets
 ├── native-host/
 │   ├── vault_clipper_host.py     # Writes .md files + downloads images
 │   └── com.vaultclipper.host.json

@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.2] — 2026-05-04
+
+### Changed
+
+- Recolored the banner and inline logos to use the plugin accent palette for a consistent visual identity.
+- Unified the popup, options, and toolbar logos around a single vault glyph so the extension presents the same mark everywhere.
+- README now leads with a centered banner and project badges, and lists the `docs/` directory in the project layout.
+
 ## [1.0.1] — 2026-05-03
 
 ### Changed
@@ -34,6 +42,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Toolbar popup with vault toggle, editable title, tags, and download-images toggle.
 - `install.sh` registers the native host with Brave/Chrome/Chromium and copies the host script to `~/.config/vault-clipper/` to satisfy macOS sandbox rules.
 
-[Unreleased]: https://github.com/Narong-Kanthanu/vault-clipper/compare/v1.0.1...HEAD
+[Unreleased]: https://github.com/Narong-Kanthanu/vault-clipper/compare/v1.0.2...HEAD
+[1.0.2]: https://github.com/Narong-Kanthanu/vault-clipper/compare/v1.0.1...v1.0.2
 [1.0.1]: https://github.com/Narong-Kanthanu/vault-clipper/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/Narong-Kanthanu/vault-clipper/releases/tag/v1.0.0

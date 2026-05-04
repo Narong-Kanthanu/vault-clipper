@@ -157,7 +157,8 @@ After pulling extension-only changes, just click the reload icon on the extensio
 ├── lib/
 │   ├── turndown.js               # Vendored HTML→Markdown (v7.2)
 │   └── clip-utils.js             # Pure helpers (sanitize, frontmatter, extract)
-├── icons/                        # Extension icons
+├── icons/                        # Extension icons (PNG, 16/32/48/128)
+├── docs/                         # README banner and other static assets
 ├── native-host/
 │   ├── vault_clipper_host.py     # Writes .md files + downloads images
 │   └── com.vaultclipper.host.json

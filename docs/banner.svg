@@ -2,14 +2,14 @@
   <style>
     .title {
       font: bold 36px -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
-      fill: #24292f;
+      fill: #e0e0e8;
     }
     .subtitle {
       font: 18px -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
-      fill: #57606a;
+      fill: #a0a0b0;
     }
     .icon {
-      stroke: #24292f;
+      stroke: #7f6df2;
       stroke-width: 2;
       fill: none;
       stroke-linecap: round;
@@ -17,17 +17,17 @@
     }
   </style>
 
-  <rect width="100%" height="100%" fill="#ffffff"/>
+  <rect width="100%" height="100%" fill="#1e1e2e"/>
 
   <!-- Centered Logo Group -->
   <g transform="translate(400,90)">
-    
+
     <!-- Icon (closer to text) -->
     <g transform="translate(-150,-20)">
       <rect x="0" y="0" width="36" height="36" rx="6" class="icon"/>
       <path d="M18 7 A11 11 0 1 1 10 11" class="icon"/>
       <polyline points="10,7 10,11 14,11" class="icon"/>
-      <circle cx="18" cy="18" r="2" fill="#24292f"/>
+      <circle cx="18" cy="18" r="2" fill="#7f6df2"/>
     </g>
 
     <!-- Title -->

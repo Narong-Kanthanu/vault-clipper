@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Vault Clipper",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Clip web pages as markdown into local Obsidian vaults",
   "permissions": [
     "activeTab",
